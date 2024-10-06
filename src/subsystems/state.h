@@ -18,12 +18,14 @@ typedef struct
     char name[255];
     CV_point dims;
     CV_point pos;
+    size_t buffer_size, attrib_stride;
+    void* vertices;
 
     // flags
-    bool running : 1;
+    bool running;
 
     // OpenGL
-    GLuint vao, vbo, texture;
+    GLuint vao, vbo, texture, program;
     
     // SDL
     SDL_Window* window_;

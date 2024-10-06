@@ -69,7 +69,7 @@ SDL_Event CV_process_events(CV_state *state)
     return event;
 }
 
-void CV_SDL_SwapBuffer(CV_state* state)
+void CV_SwapBuffer(CV_state* state)
 {
     SDL_GL_SwapWindow(state->window_);
 }
