@@ -74,6 +74,11 @@ void CV_SwapBuffer(CV_state* state)
     SDL_GL_SwapWindow(state->window_);
 }
 
+void CV_updateWindowTitle(CV_state* state)
+{
+    SDL_SetWindowTitle(state->window_, state->name);
+}
+
 void CV_shutdown(CV_state *state)
 {
     SDL_DestroyWindow(state->window_);

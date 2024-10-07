@@ -11,6 +11,8 @@
 #include "state.h"
 #include "../circle.h"
 
+#include <cglm/cglm.h>
+
 bool CV_setup_shaders_(CV_state * state);
 bool CV_compile_shader_(const char* data, const int size, GLuint *shader, GLuint type);
 char* CV_read_file_(const char* name, long* size);
@@ -62,7 +64,7 @@ bool CV_renderer_init(CV_state * state)
 
     CV_LOG_INFO("Setup the OpenGL basics");
 
-    if(CV_setup_shaders_(state)) 
+    if(!CV_setup_shaders_(state)) 
     {
         return false;
     }
@@ -89,7 +91,7 @@ void CV_renderer_set_vao(CV_state * state)
         4, // vec4?
         GL_FLOAT, // float
         GL_FALSE,  
-        state->attrib_stride, 
+        state->attrib_stride * sizeof(float), 
         (void*)0
     );
     glEnableVertexAttribArray(0);
@@ -97,10 +99,17 @@ void CV_renderer_set_vao(CV_state * state)
 
 void CV_renderer_update(CV_state * state)
 {
+    glUseProgram(state->program);
     CV_renderer_set_vao(state);
     glBindBuffer(GL_ARRAY_BUFFER, state->vbo);
 
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, state->texture);
+
     glClear(GL_COLOR_BUFFER_BIT);
+    
+    glDrawArrays(GL_POINTS, 0, state->count);
+
     glFlush();
 }
 

@@ -1,10 +1,13 @@
 #include "subsystems/logger.h"
 #include "subsystems/platform.h"
 #include "subsystems/renderer.h"
-#include <string.h>
+#include "subsystems/gpu_compute.h"
 
-#define BUFFER_ATTRIB_COUNT 2
-#define BUFFER_ITEM_COUNT 20000
+#include <string.h>
+#include <time.h>
+
+#define BUFFER_ATTRIB_COUNT 4
+#define BUFFER_ITEM_COUNT 50000
 #define BUFFER_TOTAL_SIZE sizeof(float) * BUFFER_ATTRIB_COUNT * BUFFER_ITEM_COUNT
 
 int main()
@@ -26,24 +29,69 @@ int main()
         return -1;
     }
 
-    if(CV_renderer_init(&state))
+    if(!CV_renderer_init(&state))
     {
         CV_LOG_FATAL("Failed to setup renderer");
         CV_shutdown(&state);
         return -2;
     }
 
+    if(!CV_gpu_compute_init(&state))
+    {
+        CV_LOG_FATAL("Failed to setup compute shader pipeline");
+        CV_renderer_shutdown(&state);
+        CV_shutdown(&state);
+        return -3;
+    }
+
     state.vertices = malloc(BUFFER_TOTAL_SIZE);
     state.buffer_size = BUFFER_TOTAL_SIZE;
     state.attrib_stride = BUFFER_ATTRIB_COUNT;
+    state.count = BUFFER_ITEM_COUNT;
 
-    while(state.running)
+    memset(state.vertices, 0, BUFFER_TOTAL_SIZE);
+
+    for(int i = 0; i < BUFFER_ITEM_COUNT; ++i)
     {
-        (void)CV_process_events(&state);
-        CV_renderer_update(&state);
-        CV_SwapBuffer(&state);
+        float *vertices_float = state.vertices;
+        vertices_float[(i * BUFFER_ATTRIB_COUNT) + 0] = 
+            (((float)rand() / (float)RAND_MAX) * 2.0f) - 1.0f;
+
+        vertices_float[(i * BUFFER_ATTRIB_COUNT) + 1] = 
+            (((float)rand() / (float)RAND_MAX) * 2.0f) - 1.0f;
+
+        //vertices_float[(i * BUFFER_ATTRIB_COUNT) + 2] = 
+        //    (((float)rand() / (float)RAND_MAX) * 0.1f);
+
+        //vertices_float[(i * BUFFER_ATTRIB_COUNT) + 3] = 
+        //    (((float)rand() / (float)RAND_MAX) * 0.1f);
     }
 
+    CV_gpu_compute_setup_buffer(&state);
+    CV_renderer_set_particle_count(&state);
+    
+    while(state.running)
+    {
+        struct timespec start, end;
+
+        clock_gettime(CLOCK_MONOTONIC, &start);
+
+        (void)CV_process_events(&state);
+        CV_dispatch(&state);
+        CV_pass_ssbo_to_vbo(&state);
+        CV_renderer_update(&state);
+        CV_SwapBuffer(&state);
+        
+        clock_gettime(CLOCK_MONOTONIC, &end);
+
+        double fps = 1 / (((double)end.tv_sec + 1.0e-9*end.tv_nsec) - 
+           ((double)start.tv_sec + 1.0e-9*start.tv_nsec));
+
+        snprintf(state.name, 255, "CVIATOR - FPS: %f", fps);
+        CV_updateWindowTitle(&state);
+    }
+
+    CV_gpu_compute_shutdown(&state);
     CV_renderer_shutdown(&state);
     CV_shutdown(&state);
 
