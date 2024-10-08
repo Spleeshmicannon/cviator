@@ -9,9 +9,11 @@
 
 #include "logger.h"
 #include "state.h"
-#include "../circle.h"
 
 #include <cglm/cglm.h>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 
 bool CV_setup_shaders_(CV_state * state);
 bool CV_compile_shader_(const char* data, const int size, GLuint *shader, GLuint type);
@@ -33,6 +35,7 @@ bool CV_renderer_init(CV_state * state)
     glBindBuffer(GL_ARRAY_BUFFER, state->vbo);
 
     glGenTextures(1, &state->texture);
+    glBindTexture(GL_TEXTURE_2D, state->texture);
 
     // texture wrapping
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -41,19 +44,26 @@ bool CV_renderer_init(CV_state * state)
     // texture filtering
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    
+    int width, height, nrChannels;
+    uint8_t * data = stbi_load("./assets/circle.png", &width, &height, &nrChannels, STBI_rgb_alpha);
 
     // loading texture
     glTexImage2D(
         GL_TEXTURE_2D,
         0,
         GL_RGBA8,
-        BMP_CIRCLE_WIDTH,
-        BMP_CIRCLE_HEIGHT,
+        width,
+        height,
         0,
         GL_RGBA,
         GL_UNSIGNED_BYTE,
-        BMP_CIRCLE
+        data
     );
+
+    stbi_image_free(data);
+
+    glGenerateMipmap(GL_TEXTURE_2D);
 
     // other settings
     glEnable(GL_BLEND);
@@ -68,6 +78,9 @@ bool CV_renderer_init(CV_state * state)
     {
         return false;
     }
+
+    GLuint uni_id = glGetUniformLocation(state->program, "texture_data");
+    glUniform1i(uni_id, 0);
 
     return true;
 }
@@ -138,6 +151,7 @@ bool CV_setup_shaders_(CV_state * state)
     bool return_value = false;
     GLuint fragment_shader;
     GLuint vertex_shader;
+    GLuint geometry_shader;
 
     // compiling 
     
@@ -154,6 +168,12 @@ bool CV_setup_shaders_(CV_state * state)
     return_value = CV_compile_shader_(buffer, size, &vertex_shader, GL_VERTEX_SHADER);
     free(buffer);
 
+    buffer = CV_read_file_("./assets/geometry.glsl", &size);
+
+    CV_LOG_INFO("Compiling geometry shader");
+    return_value = CV_compile_shader_(buffer, size, &geometry_shader, GL_GEOMETRY_SHADER);
+    free(buffer);
+
     if(!return_value)
     {
         CV_LOG_ERROR("Failed to compile shaders, not proceeding with linking");
@@ -166,6 +186,7 @@ bool CV_setup_shaders_(CV_state * state)
 
     glAttachShader(state->program, vertex_shader);
     glAttachShader(state->program, fragment_shader);
+    glAttachShader(state->program, geometry_shader);
 
     glLinkProgram(state->program);
 
