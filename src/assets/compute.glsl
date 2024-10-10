@@ -1,12 +1,18 @@
 #version 430 core
 layout(local_size_x = 1000) in;
 
+struct data {
+    vec4 vertices;
+    vec3 color;
+    float mass;
+};
+
 layout(std430, binding = 0) buffer Data {
-    vec4 vertices[];
+    data write[];    
 };
 
 layout(std430, binding = 1) readonly buffer readData {
-    vec4 readv[];
+    data read[];
 };
 
 void main()
@@ -17,7 +23,7 @@ void main()
     float fy = 0;
 
     const float zero = 0.000000000000000000000000000000000000001f;
-    const float mass = 0.01f;
+    const float mass = read[idx].mass;
     const int size = 50000;
 
     for(int i = 0; i < size; ++i)
@@ -25,8 +31,8 @@ void main()
         if(i == idx) continue;
         float F, rx, ry;
 
-        rx = readv[idx].x - readv[i].x;
-        ry = readv[idx].y - readv[i].y;
+        rx = read[idx].vertices.x - read[i].vertices.x;
+        ry = read[idx].vertices.y - read[i].vertices.y;
         
         const float G = 0.0000006743;
         F = (mass * mass * G) / 
@@ -38,9 +44,19 @@ void main()
     }
 
     // z (dx) and w (dy)
-    vertices[idx].z += (fx / mass);
-    vertices[idx].w += (fy / mass);
+    write[idx].vertices.z += (fx / mass);
+    write[idx].vertices.w += (fy / mass);
 
-    vertices[idx].x += vertices[idx].z;
-    vertices[idx].y += vertices[idx].w;
+    write[idx].vertices.x += write[idx].vertices.z;
+    write[idx].vertices.y += write[idx].vertices.w;
+
+    // set the colour based on velocity
+    // the length refers to the length (magnitude) of the velocity vector
+    float velocityMagnitude = length(vec2(read[idx].vertices.z, read[idx].vertices.w));
+    
+    // normalize
+    float normalizedVelocity = clamp(velocityMagnitude / 0.015, 0.0, 1.0);
+    
+    // map to a colour
+    write[idx].color = mix(vec3(0.0, 0.0, 1.0), vec3(1.0, 0.0, 0.0), normalizedVelocity);
 }

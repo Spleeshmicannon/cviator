@@ -6,7 +6,7 @@
 #include <string.h>
 #include <time.h>
 
-#define BUFFER_ATTRIB_COUNT 4
+#define BUFFER_ATTRIB_COUNT 8 // 4 + 3 + 1
 #define BUFFER_ITEM_COUNT 50000
 #define BUFFER_TOTAL_SIZE sizeof(float) * BUFFER_ATTRIB_COUNT * BUFFER_ITEM_COUNT
 
@@ -54,17 +54,17 @@ int main()
     for(int i = 0; i < BUFFER_ITEM_COUNT; ++i)
     {
         float *vertices_float = state.vertices;
+
+        // setting x,y
         vertices_float[(i * BUFFER_ATTRIB_COUNT) + 0] = 
             (((float)rand() / (float)RAND_MAX) * 2.0f) - 1.0f;
 
         vertices_float[(i * BUFFER_ATTRIB_COUNT) + 1] = 
             (((float)rand() / (float)RAND_MAX) * 2.0f) - 1.0f;
-
-        //vertices_float[(i * BUFFER_ATTRIB_COUNT) + 2] = 
-        //    (((float)rand() / (float)RAND_MAX) * 0.1f);
-
-        //vertices_float[(i * BUFFER_ATTRIB_COUNT) + 3] = 
-        //    (((float)rand() / (float)RAND_MAX) * 0.1f);
+        
+        // setting mass
+        vertices_float[(i * BUFFER_ATTRIB_COUNT) + 7] = 
+            (((float)rand() / (float)RAND_MAX) * 0.005f) + 0.0025f;
     }
 
     CV_gpu_compute_setup_buffer(&state);

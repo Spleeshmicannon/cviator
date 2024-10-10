@@ -108,6 +108,24 @@ void CV_renderer_set_vao(CV_state * state)
         (void*)0
     );
     glEnableVertexAttribArray(0);
+    glVertexAttribPointer(
+        1, // location = 1
+        3, // vec3?
+        GL_FLOAT, // float
+        GL_FALSE,  
+        state->attrib_stride * sizeof(float), 
+        (void*)(4 * sizeof(float))
+    );
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(
+        2, // location = 2
+        1, // float?
+        GL_FLOAT, // float
+        GL_FALSE,  
+        state->attrib_stride * sizeof(float), 
+        (void*)(7 * sizeof(float))
+    );
+    glEnableVertexAttribArray(2);
 }
 
 void CV_renderer_update(CV_state * state)
@@ -201,9 +219,10 @@ bool CV_setup_shaders_(CV_state * state)
         char* errorLog = (char*)malloc(logSize * sizeof(char));
         glGetProgramInfoLog(state->program, logSize, &logSize, errorLog);
 
-        CV_LOG_ERROR("Failed to link program (OpenGL shaders): ", errorLog);
+        CV_LOG_ERROR("Failed to link program (OpenGL shaders): %s", errorLog);
 
         glDeleteProgram(state->program);
+        free(errorLog);
         return false;
     }
 
